@@ -97,14 +97,21 @@ func runReview(ctx context.Context, stdout io.Writer) error {
 		return err
 	}
 
-	// 6. Build the common review prompt and run it with the selected provider.
-	result, err := client.Run(ctx, prompt.Review(changes))
+	// 6. Gather changed source files so the provider can trace the affected flow.
+	codeContext, err := git.Context(ctx)
+	if err != nil {
+		log.Fatal("It could not read the changed source files", "error", err)
+		return err
+	}
+
+	// 7. Build the flow-diagram prompt and run it with the selected provider.
+	result, err := client.Run(ctx, prompt.Review(changes, codeContext))
 	if err != nil {
 		log.Fatal("It could not complete the AI code review", "error", err)
 		return err
 	}
 
-	// 7. Display the AI code review results.
+	// 8. Display the generated flow diagram.
 	if _, err := fmt.Fprintln(stdout, result); err != nil {
 		log.Fatal("Rivio could not display the AI code review results", "action", "display_review_results", "result", "failed", "error", err)
 		return err
