@@ -17,7 +17,9 @@
 package git
 
 import (
+	"context"
 	"fmt"
+	"os/exec"
 	"strings"
 )
 
@@ -39,4 +41,21 @@ func ResolveBaseBranch(flagValue, configValue string) (string, error) {
 	}
 
 	return "", fmt.Errorf("base branch is required: set --base or review.base")
+}
+
+// CurrentBranch returns the current local Git branch name.
+//
+// It accepts a command context and returns an error if HEAD is detached or Git
+// cannot determine the branch.
+func CurrentBranch(ctx context.Context) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", "branch", "--show-current")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("get current Git branch: %w", err)
+	}
+	branch := strings.TrimSpace(string(output))
+	if branch == "" {
+		return "", fmt.Errorf("get current Git branch: HEAD is detached")
+	}
+	return branch, nil
 }

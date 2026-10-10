@@ -17,6 +17,7 @@ package git
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -54,13 +55,23 @@ func Diff(ctx context.Context, base string) (string, error) {
 // paths and contents, limited to maxContextBytes, or an error if Git cannot
 // identify changed files.
 func Context(ctx context.Context, base string) (string, error) {
+	rootCmd := exec.CommandContext(ctx, "git", "rev-parse", "--show-toplevel")
+	rootOutput, err := rootCmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("resolve repository root: %w", err)
+	}
+	repositoryRoot := strings.TrimSpace(string(rootOutput))
+
 	cmd := exec.CommandContext(ctx, "git", "diff", "--name-only", "--diff-filter=ACMR", "-z", base, "--")
+	cmd.Dir = repositoryRoot
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("list changed files with base %q: %w", base, err)
 	}
 	paths := strings.Split(strings.TrimSuffix(string(output), "\x00"), "\x00")
-	untracked, err := exec.CommandContext(ctx, "git", "ls-files", "--others", "--exclude-standard", "-z").Output()
+	untrackedCommand := exec.CommandContext(ctx, "git", "ls-files", "--others", "--exclude-standard", "-z")
+	untrackedCommand.Dir = repositoryRoot
+	untracked, err := untrackedCommand.Output()
 	if err != nil {
 		return "", fmt.Errorf("list untracked repository files: %w", err)
 	}
@@ -82,24 +93,27 @@ func Context(ctx context.Context, base string) (string, error) {
 		}
 		seen[cleanPath] = struct{}{}
 
-		info, err := os.Lstat(cleanPath)
+		absolutePath := filepath.Join(repositoryRoot, cleanPath)
+		info, err := os.Lstat(absolutePath)
 		if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
 			continue
 		}
 
-		content, err := os.ReadFile(cleanPath)
-		if err != nil {
-			continue
-		}
 		header := fmt.Sprintf("\n--- %s ---\n", cleanPath)
 		if len(header) >= remaining {
 			break
 		}
+		file, err := os.Open(absolutePath)
+		if err != nil {
+			continue
+		}
+		content, readErr := io.ReadAll(io.LimitReader(file, int64(remaining-len(header))))
+		closeErr := file.Close()
+		if readErr != nil || closeErr != nil {
+			continue
+		}
 		files.WriteString(header)
 		remaining -= len(header)
-		if len(content) > remaining {
-			content = content[:remaining]
-		}
 		files.Write(content)
 		remaining -= len(content)
 		if remaining == 0 {
