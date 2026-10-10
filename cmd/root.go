@@ -11,7 +11,7 @@
 // supplies the provider and default base branch; flags can override the file
 // path and base branch for an individual run.
 //
-//	rivio review --config rivio.yml --base main
+//	rivio review --base main
 //
 // Review findings are written to standard output. Operational events and
 // failures are reported through Rivio's structured logger.
