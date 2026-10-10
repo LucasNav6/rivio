@@ -98,7 +98,7 @@ func runReview(ctx context.Context, stdout io.Writer) error {
 	}
 
 	// 6. Gather changed source files so the provider can trace the affected flow.
-	codeContext, err := git.Context(ctx)
+	codeContext, err := git.Context(ctx, selectedBase)
 	if err != nil {
 		log.Fatal("It could not read the changed source files", "error", err)
 		return err
