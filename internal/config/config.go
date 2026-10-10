@@ -27,6 +27,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -59,11 +61,19 @@ type ReviewConfig struct {
 
 // Load reads and parses a Rivio YAML configuration file.
 //
-//	cfg, err := config.Load("rivio.yml")
+//	cfg, err := config.Load("~/.config/rivio/config.yml")
 //
 // It accepts a file path and returns the decoded Config or an error if the
 // file cannot be read or its contents are not valid YAML.
 func Load(path string) (*Config, error) {
+	if path == "~" || strings.HasPrefix(path, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("resolve config path %q: %w", path, err)
+		}
+		path = filepath.Join(home, strings.TrimPrefix(path, "~/"))
+	}
+
 	// 1. Read the configuration file from disk.
 	data, err := os.ReadFile(path)
 	if err != nil {

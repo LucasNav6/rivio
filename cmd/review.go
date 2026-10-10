@@ -7,13 +7,13 @@
 //
 // # Reviewing Changes
 //
-// Use the review command from a Git working tree. The configuration file
-// supplies the provider and default base branch; flags can override the file
-// path and base branch for an individual run.
+// Use the review command from a Git working tree. The configuration file at
+// ~/.config/rivio/config.yml supplies the provider and default base branch;
+// flags can override the file path and base branch for an individual run.
 //
-//	rivio review --config rivio.yml --base main
+//	rivio review --base main
 //
-// Review findings are written to standard output. Operational events and
+// Flow diagrams are written to standard output. Operational events and
 // failures are reported through Rivio's structured logger.
 package cmd
 
@@ -124,7 +124,7 @@ func runReview(ctx context.Context, stdout io.Writer) error {
 // init registers review command flags and attaches reviewCmd to rootCmd. It
 // accepts no arguments and returns no value.
 func init() {
-	reviewCmd.Flags().StringVar(&configPath, "config", "rivio.yml", "Path to Rivio config file")
+	reviewCmd.Flags().StringVar(&configPath, "config", "~/.config/rivio/config.yml", "Path to Rivio config file")
 	reviewCmd.Flags().StringVar(&baseBranch, "base", "", "Base branch to compare against config")
 	rootCmd.AddCommand(reviewCmd)
 }
